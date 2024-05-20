@@ -1,0 +1,351 @@
+/*##########################################################################
+System Requirements
+--------------------
+Design a coupon and voucher managment system's Low level design.
+
+Requirements were:
+Admin will create coupons with rules(like match age>18 and cart_value>1000);
+Coupons will have (averall uses limit / per ser limit ), expiry date , active/inactive etc.
+
+Vouchers will be of type
+Unassigned : anyone can use but only one uses
+"PreAssigned": Voucher attached to user id
+
+Was asked to design api too:
+User will see list of coupons available and Vouchers;
+Admin can delete/ create , activate or disable coupons etc.
+
+
+##########################################################################*/
+
+#include <iostream>
+#include <vector>
+#include <map>
+#include <ctime>
+
+using namespace std;
+
+enum class CouponStatus
+{
+    ACTIVE = 1,
+    INACTIVE = 2
+};
+
+enum class AccountStatus
+{
+    ACTIVE = 1,
+    INACTIVE = 2
+};
+
+enum class RuleTypes
+{
+    AGE_LIMIT = 1,
+    TRANSACTION_VALUE_LIMIT = 2,
+    USAGE_LIMIT = 3
+};
+
+class Token
+{
+public:
+    time_t createdAt;
+    time_t expiryTime;
+    string name;
+    CouponStatus status;
+    string description;
+    string createdBy;
+
+    Token(int expiryDurationInDays, string name, string description, string creator) status(CouponStatus::ACTIVE)
+    {
+        this->createdAt = time(0);
+        this->expiryTime = this->createdAt + expiryDurationInDays * 24 * 60 * 60;
+        this->name = name;
+        this->status = status;
+        this->description = description;
+        this->createdBy = creator;
+    }
+};
+
+class Coupon : public Token
+{
+public:
+    int id;
+    vector<Rule *> rules;
+    map<string, int> utilization;
+
+    Coupon(int id, int expiryDurationInDays, string name, string description, string creator, CouponStatus status, vector<Rule *> rules)
+        : Token(expiryDurationInDays, name, description, creator)
+    {
+        this->id = id;
+        this->rules = rules;
+        this->status = status;
+    }
+
+    void addRule(Rule *rule)
+    {
+        this->rules.push_back(rule);
+    }
+
+    bool applyCoupon(User *user, void *transaction)
+    {
+        bool canUseCoupon = true;
+        for (Rule *rule : this->rules)
+        {
+            if (!rule->canApply(user, transaction, this))
+            {
+                canUseCoupon = false;
+                break;
+            }
+        }
+        return canUseCoupon;
+    }
+};
+
+class Rule
+{
+public:
+    string name;
+    RuleTypes type;
+
+    Rule(string name, RuleTypes type)
+    {
+        this->name = name;
+        this->type = type;
+    }
+
+    virtual bool canApply(User *user, void *transaction, Coupon *coupon) = 0;
+};
+
+class AgeLimitRule : public Rule
+{
+public:
+    int initialOffset;
+    int finalOffset;
+
+    AgeLimitRule(string name, RuleTypes type, int initialOffset, int finalOffset)
+        : Rule(name, type)
+    {
+        this->initialOffset = initialOffset;
+        this->finalOffset = finalOffset;
+    }
+
+    bool canApply(User *user, void *transaction, Coupon *coupon) override
+    {
+        int userAge = user->getAge();
+        if (userAge >= initialOffset && userAge <= finalOffset)
+            return true;
+        return false;
+    }
+};
+
+class Voucher : public Token
+{
+public:
+    bool isUsed;
+    User *user;
+    bool preAssigned; // Flag to indicate if the voucher is pre-assigned
+
+    Voucher(int expiryDurationInDays, string name, string description, string creator, CouponStatus status = CouponStatus::ACTIVE,
+            bool preAssigned = false, User *user = nullptr)
+        : Token(expiryDurationInDays, name, description, creator), isUsed(false), preAssigned(preAssigned), user(user)
+    {
+        this->status = status;
+    }
+
+    bool applyVoucher(User *user)
+    {
+        if (this->isUsed)
+        {
+            cout << "Voucher already used." << endl;
+            return false;
+        }
+
+        if (this->preAssigned && this->user != user)
+        {
+            cout << "Voucher not assigned to this user." << endl;
+            return false;
+        }
+
+        this->isUsed = true;
+        cout << "Voucher applied successfully." << endl;
+        return true;
+    }
+};
+
+class System
+{
+private:
+    static System *instance;
+
+public:
+    vector<Coupon *> coupons;
+    vector<Voucher *> vouchers;
+    vector<class Admin *> admins;
+    vector<class User *> users;
+
+    static System *getInstance()
+    {
+        if (instance == nullptr)
+        {
+            instance = new System();
+        }
+        return instance;
+    }
+
+    Voucher *addVoucher(int expiryDurationInDays, string name, string description, string creator, CouponStatus status = CouponStatus::ACTIVE, bool preAssigned = false, User *user = nullptr)
+    {
+        Voucher *voucher = new Voucher(expiryDurationInDays, name, description, creator, status, preAssigned, user);
+        this->vouchers.push_back(voucher);
+        return voucher;
+    }
+
+    Coupon *addCoupon(int id, int expiryDurationInDays, string name, string description, string creator, CouponStatus status, vector<Rule *> rules)
+    {
+        Coupon *coupon = new Coupon(id, expiryDurationInDays, name, description, creator, status, rules);
+        this->coupons.push_back(coupon);
+        return coupon;
+    }
+
+    bool applyCoupon(User *user, int couponId, void *transaction)
+    {
+        for (Coupon *coupon : this->coupons)
+        {
+            if (coupon->id == couponId)
+            {
+                return coupon->applyCoupon(user, transaction);
+            }
+        }
+        return false;
+    }
+
+    bool applyVoucher(User *user, int voucherId)
+    {
+        for (Voucher *voucher : this->vouchers)
+        {
+            if (voucher->id == voucherId)
+            {
+                return voucher->applyVoucher(user);
+            }
+        }
+        return false;
+    }
+    // Implement other methods as needed
+};
+
+class Person
+{
+public:
+    int age;
+    string name;
+
+    Person(int age, string name)
+    {
+        this->age = age;
+        this->name = name;
+    }
+};
+
+class Account
+{
+public:
+    string email;
+    string password;
+    AccountStatus status;
+
+    Account(string email, string password, AccountStatus status)
+    {
+        this->email = email;
+        this->password = password;
+        this->status = status;
+    }
+
+    void resetPassword(string password)
+    {
+        // Implementation here
+    }
+};
+
+class Admin : public Person
+{
+public:
+    Account *account;
+    System *system;
+
+    Admin(Account *account, System *system) : Person(0, "")
+    {
+        this->account = account;
+        this->system = system;
+    }
+
+    Voucher *createVoucher(int expiryDurationInDays, string name, string description, string creator, CouponStatus status, bool preAssigned, User *user)
+    {
+        return this->system->addVoucher(expiryDurationInDays, name, description, creator, status, preAssigned, user);
+    }
+
+    Coupon *createCoupon(int id, int expiryDurationInDays, string name, string description, string creator, CouponStatus status, vector<Rule *> rules)
+    {
+        return this->system->addCoupon(id, expiryDurationInDays, name, description, creator, status, rules);
+    }
+
+    void updateVoucher(Voucher *voucher)
+    {
+        // Implementation here
+    }
+
+    void updateCoupon(Coupon *coupon)
+    {
+        // Implementation here
+    }
+};
+
+class User : public Person
+{
+public:
+    Account *account;
+
+    User(Account *account) : Person(0, "")
+    {
+        this->account = account;
+    }
+
+    // Implement other methods as needed
+};
+
+System *System::instance = nullptr;
+
+int main()
+{
+    System *system = System::getInstance();
+    Admin *admin = new Admin(new Account("admin@example.com", "adminpassword", AccountStatus::ACTIVE), system);
+    User *user = new User(new Account("user@example.com", "userpassword", AccountStatus::ACTIVE));
+
+    system->users.push_back(user);
+
+    // Example of creating a coupon with rules
+    vector<Rule *> rules;
+    AgeLimitRule *ageLimitRule = new AgeLimitRule("Age Limit", RuleTypes::AGE_LIMIT, 18, 60);
+    rules.push_back(ageLimitRule);
+    Coupon *coupon = admin->createCoupon(1, 30, "Discount Coupon", "Get 10% off on all purchases", "admin", CouponStatus::ACTIVE, rules);
+
+    cout << "Coupon created successfully." << endl;
+
+    // Example of creating vouchers
+    Voucher *unassignedVoucher = admin->createVoucher(30, "Unassigned Voucher", "10% off on all purchases", "admin", CouponStatus::ACTIVE, false, nullptr);
+    Voucher *preAssignedVoucher = admin->createVoucher(30, "PreAssigned Voucher", "20% off on next purchase", "admin", CouponStatus::ACTIVE, true, user);
+
+    // Applying coupon
+    bool couponApplied = system->applyCoupon(user, 1, nullptr);
+    if (couponApplied)
+    {
+        cout << "Coupon applied successfully." << endl;
+    }
+    else
+    {
+        cout << "Coupon application failed." << endl;
+    }
+
+    // Applying vouchers
+    bool unassignedVoucherApplied = system->applyVoucher(user, unassignedVoucher->id);
+    bool preAssignedVoucherApplied = system->applyVoucher(user, preAssignedVoucher->id);
+
+    return 0;
+}
