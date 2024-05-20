@@ -1,0 +1,174 @@
+/*##########################################################################
+System Requirements
+--------------------
+1. Book Inventory Management: Add, update, and remove books.
+2. Membership Management: Manage library member information.
+3. Book Lending: Handle book checkouts and returns.
+4. Search Functionality: Enable searching for books.
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Adding Books: Librarians can add new books to the system.
+2. Registering Members: Register new library members.
+3. Lending Books: Check out books to members.
+4. Returning Books: Manage the return process.
+##########################################################################*/
+
+#include <bits/stdc++.h>
+using namespace std;
+
+class Book
+{
+private:
+    std::string title;
+    std::string author;
+    std::string ISBN;
+    bool isAvailable;
+
+public:
+    // Constructor
+    Book(const std::string &title, const std::string &author, const std::string &ISBN)
+        : title(title), author(author), ISBN(ISBN), isAvailable(true) {}
+
+    // Getters
+    std::string getTitle() const { return title; }
+    std::string getAuthor() const { return author; }
+    std::string getISBN() const { return ISBN; }
+    bool getIsAvailable() const { return isAvailable; }
+
+    // Setters (if needed)
+    void setIsAvailable(bool available) { isAvailable = available; }
+};
+
+class Lend
+{
+private:
+    Book *book;
+    Member *member;
+    std::tm issueDate;
+    std::tm dueDate;
+
+public:
+    Lend(Book *book, Member *member) : book(book), member(member)
+    {
+        std::time_t now = std::time(nullptr);
+        issueDate = *std::localtime(&now);
+        dueDate = issueDate;
+        dueDate.tm_mday += 14; // 2-week Lend period
+        std::mktime(&dueDate);
+        book->setIsAvailable(false);
+        member->lendBook(this);
+    }
+
+    // Return a book
+    void returnBook()
+    {
+        book->setIsAvailable(true);
+        // Remove this Lend from member's record (assuming it's implemented in Member class)
+        member->returnLendedBook(this);
+    }
+
+    // Getters and setters...
+};
+
+class Member
+{
+private:
+    std::string name;
+    std::string memberId;
+    std::unordered_set<Book *> lendedBooks;
+
+    std::string generateMemberId()
+    {
+        // Generate a unique member ID
+        return "MEM" + std::to_string(std::time(nullptr));
+    }
+
+public:
+    Member(const std::string &name)
+        : name(name), memberId(generateMemberId()) {}
+
+    void lendBook(Book *lend)
+    {
+        lendedBooks.insert(lend);
+    }
+
+    const std::string &getMemberId() const
+    {
+        return memberId;
+    }
+
+    const std::unordered_set<Book *> &getlendedBooks() const
+    {
+
+        return lendedBooks;
+    }
+    void returnLendedBook(Book *book)
+    {
+        lendedBooks.erase(book);
+    }
+    // Other necessary methods...
+};
+
+class Library
+{
+private:
+    std::vector<Book *> books;
+    std::vector<Member *> members;
+
+public:
+    Library() {}
+
+    void addBook(Book *book)
+    {
+        books.push_back(book);
+    }
+
+    void registerMember(Member *member)
+    {
+        members.push_back(member);
+    }
+
+    void lendBook(const std::string &ISBN, Member *member)
+    {
+        auto it = std::find_if(books.begin(), books.end(), [&](Book *book)
+                               { return book->getISBN() == ISBN && book->getIsAvailable(); });
+
+        if (it != books.end())
+        {
+            new Lend(*it, member);
+        }
+    }
+
+    std::vector<Book *> searchBooksByTitle(const std::string &title)
+    {
+        std::vector<Book *> result;
+        for (Book *book : books)
+        {
+            if (book->getTitle().find(title) != std::string::npos)
+            {
+                result.push_back(book);
+            }
+        }
+        return result;
+    }
+
+    // Other necessary methods...
+};
+
+int main()
+{
+    // Example usage
+    Book book1("Title1", "Author1", "ISBN1");
+    Book book2("Title2", "Author2", "ISBN2");
+    Member member("John Doe");
+
+    Library library;
+    library.addBook(&book1);
+    library.addBook(&book2);
+    library.registerMember(&member);
+
+    library.lendBook("ISBN1", &member);
+
+    return 0;
+}
