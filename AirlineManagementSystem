@@ -1,0 +1,248 @@
+/*##########################################################################
+System Requirements
+--------------------
+1. Flight Management: Create and schedule flights.
+2. Passenger Management: Manage passenger bookings and check-ins.
+3. Crew Management: Assign crew members to flights.
+4. Aircraft Management: Track aircraft and maintenance schedules.
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Scheduling and Managing Flights
+2. Booking and Managing Passenger Seats
+3. Assigning Crew to Flights
+4. Managing Aircraft
+
+##########################################################################*/
+
+#include <bits/stdc++.h>
+using namespace std;
+
+class Aircraft
+{
+private:
+    string registrationNumber;
+    string model;
+    int totalSeats;
+
+public:
+    Aircraft(const string &registrationNumber, const string &model, int totalSeats)
+        : registrationNumber(registrationNumber), model(model), totalSeats(totalSeats) {}
+
+    int getTotalSeats() const
+    {
+        return totalSeats;
+    }
+    // Getters and setters...
+};
+
+class Passenger
+{
+private:
+    string name;
+    string passportNumber;
+
+public:
+    Passenger(const string &name, const string &passportNumber)
+        : name(name), passportNumber(passportNumber) {}
+
+    const string &getName() const
+    {
+        return name;
+    }
+
+    // Getters and setters...
+};
+
+class Seat
+{
+private:
+    int seatNumber;
+    bool isBooked;
+
+public:
+    Seat(int seatNumber, bool isBooked)
+        : seatNumber(seatNumber), isBooked(isBooked) {}
+
+    bool bookSeat()
+    {
+        if (!isBooked)
+        {
+            isBooked = true;
+            return true;
+        }
+        return false;
+    }
+    // Getters...
+};
+
+class CrewMember
+{
+private:
+    string name;
+    string employeeId;
+
+public:
+    CrewMember(const string &name, const string &employeeId)
+        : name(name), employeeId(employeeId) {}
+
+    // Getters and setters...
+};
+
+class ISeatManager
+{
+public:
+    virtual bool bookSeat(Passenger &passenger, vector<Seat> &seats) = 0;
+    virtual ~ISeatManager() = default;
+};
+
+class DefaultSeatManager : public ISeatManager
+{
+public:
+    bool bookSeat(Passenger &passenger, std::vector<Seat> &seats) override
+    {
+        for (Seat &seat : seats)
+        {
+            if (!seat.isBooked)
+            {
+                seat.isBooked = true;
+                cout << "Seat booked for passenger: " << passenger.getName() << endl;
+                return true;
+            }
+        }
+        cout << "No available seats for the flight." << endl;
+        return false;
+    }
+};
+
+class Flight
+{
+private:
+    string flightNumber;
+    string departureTime;
+    string origin;
+    string destination;
+    Aircraft aircraft;
+    vector<Seat> seats;
+    unordered_map<Passenger *, Seat *> passengerSeats;
+    vector<CrewMember *> flightCrew;
+
+    void initializeSeats()
+    {
+        seats.resize(aircraft.getTotalSeats());
+        for (int i = 0; i < aircraft.getTotalSeats(); ++i)
+            seats[i] = Seat(i + 1, false);
+    }
+
+public:
+    Flight(const string &flightNumber, const string &departureTime, const string &origin, const string &destination, const Aircraft &aircraft)
+        : flightNumber(flightNumber), departureTime(departureTime), origin(origin), destination(destination), aircraft(aircraft)
+    {
+        initializeSeats();
+    }
+
+    bool bookSeat(Passenger &passenger, ISeatManager &seatManager)
+    {
+        return seatManager.bookSeat(passenger, seats);
+    }
+    void assignCrewToFlight(Crew *member)
+    {
+        flightCrew.push_back(member);
+    }
+    const string &getFlightNumber() const
+    {
+        return flightNumber;
+    }
+};
+
+class AirlineManagementSystem
+{
+private:
+    vector<Aircraft> aircrafts;
+    vector<Flight> flights;
+    vector<Passenger> passengers;
+    vector<CrewMember> crewMembers;
+    ISeatManager *seatManager;
+
+public:
+    AirlineManagementSystem(ISeatManager *manager) : seatManager(manager) {}
+
+    ~AirlineManagementSystem()
+    {
+        delete seatManager; // Free the allocated memory for seatManager
+    }
+
+    void addFlight(const Flight &flight)
+    {
+        flights.push_back(flight);
+    }
+
+    void addAircraft(const Aircraft &aircraft)
+    {
+        aircrafts.push_back(aircraft);
+    }
+
+    void addPassenger(const Passenger &passenger)
+    {
+        passengers.push_back(passenger);
+    }
+
+    void addCrewMember(const CrewMember &crewMember)
+    {
+        crewMembers.push_back(crewMember);
+    }
+
+    void bookSeat(const Flight &flight, Passenger &passenger)
+    {
+        for (Flight &f : flights)
+        {
+            if (f.getFlightNumber() == flight.getFlightNumber())
+            {
+                if (f.bookSeat(passenger, *seatManager))
+                {
+                    cout << "Seat booked for passenger: " << passenger.getName() << endl;
+                }
+                else
+                {
+                    cout << "No available seats for the flight." << endl;
+                }
+                return;
+            }
+        }
+        cout << "Flight not found." << endl;
+    }
+
+    // Other necessary methods...
+};
+
+int main()
+{
+    AirlineManagementSystem airlineSystem(new DefaultSeatManager);
+
+    Passenger passenger1("John Doe", "ABCD123");
+    Passenger passenger2("Jane Smith", "EFGH456");
+
+    Flight flight("F001", "2024-01-15 12:00", "CityA", "CityB", 50);
+
+    airlineSystem.addPassenger(passenger1);
+    airlineSystem.addPassenger(passenger2);
+    airlineSystem.addFlight(flight);
+
+    airlineSystem.bookSeat(flight, passenger1);
+    airlineSystem.bookSeat(flight, passenger2);
+    airlineSystem.bookSeat(flight, passenger1); // Attempt to book another seat
+
+    // Additional usage as needed...
+
+    return 0;
+}
+
+/*
+The Strategy pattern is applied, where ISeatManager acts as a strategy interface,
+and DefaultSeatManager is one of the concrete strategies. This pattern allows the
+AirlineManagementSystem to switch between different seat management strategies without modifying its code.
+
+Lastly, the Singleton pattern could be observed in the AirlineManagementSystem class, where
+it manages a single instance of the ISeatManager interface throughout its lifetime.
+
+*/
