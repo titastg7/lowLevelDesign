@@ -1,0 +1,229 @@
+/*##########################################################################
+System Requirements
+--------------------
+The Coffee Vending Machine is designed to:
+
+1. Offer Multiple Coffee Types: Provide a selection of coffee types such as Espresso, Latte, and Cappuccino.
+2. Manage Inventory: Track ingredients like coffee, milk, sugar, and water.
+3. Process Orders: Handle customer coffee selections and dispense the correct beverage.
+4. Payment Handling: Manage simplified payment transactions for the coffee.
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Selecting a Coffee Type: Customers choose their preferred type of coffee.
+2. Checking Ingredient Availability: Ensure sufficient ingredients are available for the selected coffee.
+3. Dispensing Coffee: Prepare and dispense the chosen coffee.
+4. Processing Payment: Handle the transaction for the coffee purchase.
+
+##########################################################################*/
+
+#include <bits/stdc++.h>
+using namespace std;
+
+enum class Ingredient
+{
+    COFFEE,
+    MILK,
+    WATER
+    // Add more ingredients as needed
+};
+
+enum class Coffee
+{
+    ESPRESSO,
+    LATTE
+    // Add more coffee types as needed
+};
+
+// Interface for coffee recipes
+class CoffeeRecipe
+{
+protected:
+    unordered_map<Ingredient, int> ingredients;
+    int price;
+
+public:
+    virtual bool checkIngredients(const Inventory &inventory) const = 0;
+    virtual void dispense(Inventory &inventory) const = 0;
+    virtual int getPrice() const = 0;
+    virtual ~CoffeeRecipe() = default;
+};
+
+// Concrete implementation for Espresso
+class EspressoRecipe : public CoffeeRecipe
+{
+public:
+    EspressoRecipe()
+    {
+        ingredients[Ingredient::COFFEE] = 2; // Espresso requires 2 units of coffee
+        price = 2;
+    }
+
+    bool checkIngredients(const Inventory &inventory) const override
+    {
+        for (const auto &ingredient : ingredients)
+        {
+            if (!inventory.checkIngredientAvailability(ingredient.first, ingredient.second))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    int getPrice() const override
+    {
+        return price; // Price of Espresso
+    }
+
+    void dispense(Inventory &inventory) const override
+    {
+        for (const auto &ingredient : ingredients)
+        {
+            inventory.useIngredient(ingredient.first, ingredient.second);
+        }
+        std::cout << "Dispensing Espresso..." << std::endl;
+    }
+};
+
+// Concrete implementation for Latte
+class LatteRecipe : public CoffeeRecipe
+{
+public:
+    LatteRecipe()
+    {
+        ingredients[Ingredient::COFFEE] = 1; // Latte requires 1 unit of coffee
+        ingredients[Ingredient::MILK] = 1;   // Latte requires 1 unit of milk
+        price = 3;
+    }
+    bool checkIngredients(const Inventory &inventory) const override
+    {
+        for (const auto &ingredient : ingredients)
+        {
+            if (!inventory.checkIngredientAvailability(ingredient.first, ingredient.second))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    int getPrice() const override
+    {
+        return price; // Price of Latte
+    }
+    void dispense(Inventory &inventory) const override
+    {
+        for (const auto &ingredient : ingredients)
+        {
+            inventory.useIngredient(ingredient.first, ingredient.second);
+        }
+        std::cout << "Dispensing Latte..." << std::endl;
+    }
+};
+
+class Inventory
+{
+private:
+    std::unordered_map<Ingredient, int> ingredients;
+
+public:
+    Inventory()
+    {
+        // Initialize with default ingredients
+        ingredients[Ingredient::COFFEE] = 10; // Assuming 10 units of coffee initially
+        ingredients[Ingredient::MILK] = 10;   // Assuming 10 units of milk initially
+        // Add more ingredients as needed
+    }
+
+    bool checkIngredientAvailability(Ingredient ingredient, int amount)
+    {
+        auto it = ingredients.find(ingredient);
+        return it != ingredients.end() && it->second >= amount;
+    }
+
+    void useIngredient(Ingredient ingredient, int amount)
+    {
+        if (checkIngredientAvailability(ingredient, amount))
+        {
+            ingredients[ingredient] -= amount;
+        }
+    }
+
+    // Methods to add or update ingredients...
+};
+
+class PaymentProcessor
+{
+public:
+    virtual void processPayment(int amount) const = 0;
+    virtual ~PaymentProcessor() = default;
+};
+
+class SimplePaymentProcessor : public PaymentProcessor
+{
+public:
+    void processPayment(int amount) const override
+    {
+        std::cout << "Processing payment of $" << amount << std::endl;
+    }
+};
+
+class CoffeeVendingMachine
+{
+private:
+    Inventory inventory;
+    PaymentProcessor paymentProcessor;
+
+public:
+    CoffeeVendingMachine(const PaymentProcessor &processor) : inventory(), paymentProcessor(processor) {}
+
+    unique_ptr<CoffeeRecipe> createRecipe(Coffee coffeeType)
+    {
+        switch (coffeeType)
+        {
+        case Coffee::ESPRESSO:
+            return make_unique<EspressoRecipe>();
+        case Coffee::LATTE:
+            return make_unique<LatteRecipe>();
+        default:
+            return nullptr;
+        }
+    }
+    void makeCoffee(Coffee coffeeType, int payment)
+    {
+        auto coffeeRecipe = createRecipe(coffeeType);
+
+        if (coffeeRecipe != NULL && coffeeRecipe->checkIngredients(inventory))
+        {
+            int coffeePrice = coffeeRecipe->getPrice();
+            if (payment >= coffeePrice)
+            {
+                coffeeRecipe->dispense(inventory);
+                paymentProcessor.processPayment(coffeePrice);
+                // Dispense remainder cash if overpaid
+                if (payment > coffeePrice)
+                {
+                    std::cout << "Dispensing remainder cash: $" << (payment - coffeePrice) << std::endl;
+                }
+            }
+            else
+                cout << "Insufficient payment. Cannot make coffee." << std::endl;
+        }
+        else
+        {
+            cout << "Insufficient ingredients. Cannot make coffee." << std::endl;
+        }
+        delete (coffeeRecipe);
+    }
+};
+
+int main()
+{
+    SimplePaymentProcessor paymentProcessor;
+    CoffeeVendingMachine vendingMachine(paymentProcessor);
+    vendingMachine.makeCoffee(Coffee::ESPRESSO, 2);
+
+    vendingMachine.makeCoffee(Coffee::LATTE, 3);
+
+    return 0;
+}
