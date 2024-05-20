@@ -1,0 +1,145 @@
+/*##########################################################################
+System Requirements
+--------------------
+1. Publishers to send messages to topics.
+2. Subscribers to receive messages from topics they are subscribed to.
+3. Scalability and decoupling between publishers and subscribers.
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Subscribing to Topics: Users can subscribe to topics of interest.
+2. Publishing Messages: Publishers can send messages to topics.
+3. Receiving Messages: Subscribers receive messages from their subscribed topics.
+##########################################################################*/
+
+#include <bits/stdc++.h>
+using namespace std;
+
+class Topic
+{
+private:
+    std::string name;
+
+public:
+    Topic(const std::string &name) : name(name) {}
+
+    const std::string &getName() const
+    {
+        return name;
+    }
+};
+
+class Message
+{
+private:
+    std::string content;
+    Topic topic;
+
+public:
+    Message(const std::string &content, const Topic &topic) : content(content), topic(topic) {}
+
+    const std::string &getContent() const
+    {
+        return content;
+    }
+
+    const Topic &getTopic() const
+    {
+        return topic;
+    }
+};
+
+class Subscriber
+{
+public:
+    virtual void receive(const Message &message) = 0;
+    virtual ~Subscriber() = default;
+};
+
+class Publisher
+{
+public:
+    void publish(const Message &message, PubSubService &service)
+    {
+        service.addMessageToQueue(message);
+    }
+};
+
+class PubSubService
+{
+private:
+    std::queue<Message> messageQueue;
+    std::unordered_map<std::string, std::vector<Subscriber *>> subscribersTopicMap;
+
+public:
+    void addMessageToQueue(const Message &message)
+    {
+        messageQueue.push(message);
+    }
+
+    void addSubscriber(const std::string &topicName, Subscriber *subscriber)
+    {
+        if (subscribersTopicMap.find(topicName) == subscribersTopicMap.end())
+        {
+            subscribersTopicMap[topicName] = std::vector<Subscriber *>();
+        }
+        subscribersTopicMap[topicName].push_back(subscriber);
+    }
+
+    void removeSubscriber(const std::string &topicName, Subscriber *subscriber)
+    {
+        auto it = subscribersTopicMap.find(topicName);
+        if (it != subscribersTopicMap.end())
+        {
+            it->second.erase(std::remove(it->second.begin(), it->second.end(), subscriber), it->second.end());
+        }
+    }
+
+    void broadcast()
+    {
+        while (!messageQueue.empty())
+        {
+            Message message = messageQueue.front();
+            messageQueue.pop();
+            const std::string &topicName = message.getTopic().getName();
+            auto it = subscribersTopicMap.find(topicName);
+            if (it != subscribersTopicMap.end())
+            {
+                for (Subscriber *subscriber : it->second)
+                {
+                    subscriber->receive(message);
+                }
+            }
+        }
+    }
+};
+
+class ConcreteSubscriber : public Subscriber
+{
+public:
+    void receive(const Message &message) override
+    {
+        std::cout << "Received Message: " << message.getContent() << " from Topic: " << message.getTopic().getName() << std::endl;
+    }
+};
+
+int main()
+{
+    PubSubService pubSubService;
+    ConcreteSubscriber subscriber1, subscriber2;
+
+    Topic topic("General");
+    Message message1("Hello World!", topic);
+    Message message2("PubSub is cool!", topic);
+
+    Publisher publisher;
+    publisher.publish(message1, pubSubService);
+    publisher.publish(message2, pubSubService);
+
+    pubSubService.addSubscriber("General", &subscriber1);
+    pubSubService.addSubscriber("General", &subscriber2);
+
+    pubSubService.broadcast();
+
+    return 0;
+}
