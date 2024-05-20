@@ -1,0 +1,446 @@
+/*##########################################################################
+System Requirements
+--------------------
+1. Design Ride sharing application
+2. Drivers Management
+3. Users/Passenger Management
+4. Ride Management
+5. Fare Calculation
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Allowing users to book a ride.
+2. Register and management of user and drivers.
+3. Fare Calculation based on strategy
+4. Assign driver based on strategy
+##########################################################################*/
+
+
+#include <bits/stdc++.h>
+using namespace std;
+
+enum class RATING
+{
+    ONE,
+    TWO,
+    THREE,
+    FOUR,
+    FIVE,
+    UNASSIGNED
+};
+class Location
+{
+    int longitude, latitude;
+
+public:
+    Location(int pLongitude, int pLatitude) : longitude(pLongitude), latitude(pLatitude)
+    {
+    }
+    int getLongitude()
+    {
+        return longitude;
+    }
+    int getLatitude()
+    {
+        return Latitude;
+    }
+};
+class Rider
+{
+    string name;
+    RATING rating;
+
+public:
+    Rider(string pName, RATING pRating) : name(pName), rating(pRating)
+    {
+    }
+    string getRiderName()
+    {
+        return name;
+    }
+    RATING getRating()
+    {
+        return rating;
+    }
+};
+
+class Driver
+{
+    string name;
+    RATING rating;
+    bool avail;
+
+public:
+    Driver(string pName, RATING pRating) : name(pName), rating(pRating), avail(true)
+    {
+    }
+    string getDriverName()
+    {
+        return name;
+    }
+    RATING getRating()
+    {
+        return rating;
+    }
+};
+
+class RiderMrg
+{
+    static mutex mtx;
+    RiderMrg *riderMrgInstance = nullptr;
+    unordered_map<string, Rider *> riderMap;
+    RiderMrg()
+    {
+    }
+    RiderMgr(const RiderMgr &);
+    RiderMgr operator=(const RiderMgr &);
+
+public:
+    static RiderMgr *getRiderMgr()
+    {
+        if (riderMrgInstance == nullptr)
+        {
+            mtx.lock();
+            if (riderMrgInstance == nullptr)
+            {
+                riderMrgInstance = new RiderMgr();
+            }
+            mtx.unlock();
+        }
+        return riderMrgInstance;
+    }
+};
+
+class RiderMgr
+{
+    static mutex mtx;
+    Static RiderMgr *riderMgrInstance = nullptr;
+    unordered_map<string, Rider *> riderMap;
+    RiderMgr() {}
+    RiderMgr(const RiderMgr &);
+    RiderMgr operator=(const RiderMgr &);
+
+public:
+    static RiderMgr *getRiderMgr()
+    {
+        if (riderMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (riderMgrInstance == nullptr)
+            {
+                riderMgrInstance = new RiderMgr();
+            }
+            mtx.unlock();
+        }
+        return riderMgrInstance;
+    }
+    void addRider(string pRiderName, Rider *pRider)
+    {
+        riderMap[pRiderName] = pRider;
+    }
+    Rider *getRider(string pRiderName)
+    {
+        return riderMap[pRiderName];
+    }
+};
+
+class DriverMgr
+{
+    static mutex mtx;
+    Static DriverMgr *driverMgrInstance = nullptr;
+    unordered_map<string, Driver *> driverMap;
+    DriverMgr() {}
+    DriverMgr(const DriverMgr &);
+    DriverMgr operator=(const DriverMgr &);
+
+public:
+    static DriverMgr *getDriverMgr()
+    {
+        if (driverMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (driverMgrInstance == nullptr)
+            {
+                driverMgrInstance = new DriverMgr();
+            }
+            mtx.unlock();
+        }
+        return driverMgrInstance;
+    }
+    void addDriver(string pDriverName, Driver *pDriver)
+    {
+        driverMap[pDriverName] = pDriver;
+    }
+    Driver *getDriver(string pDriverName)
+    {
+        return riderMap[pDriverName];
+    }
+    unordered_map<string, Driver *> getDriverMap()
+    {
+        return driverMap;
+    }
+};
+class Util
+{
+public:
+    static bool isHighRating(RATING pRating)
+    {
+        return pRating == RATING::FOUR || pRating == RATING::FIVE;
+    }
+    static string ratingToString(RATING pRating)
+    {
+        if (pRating == RATING::ONE)
+            return "One";
+        if (pRating == RATING::TWO)
+            return "Two";
+        if (pRating == RATING::THREE)
+            return "Three";
+        if (pRating == RATING::FOUR)
+            return "Four";
+        if (pRating == RATING::FIVE)
+            return "Five";
+        return "invalid rating";
+    }
+};
+
+class PricingStrategy
+{
+public:
+    virtual double calculatePrice(TripMetaData *pTripMetaData) = 0;
+};
+
+class DefaultPricingStrategy : public PricingStrategy
+{
+public:
+    double calculatePrice(TripMetaData *pTripData)
+    {
+        cout << " Based on default strategy, price = 100" << end;
+        return 100.0;
+    }
+};
+
+class RatingBasedPricingStrategy : public PricingStrategy
+{
+public:
+    double calculatePrice(TripMetaData *pTripMetaData)
+    {
+        double price = Util::isHighRating(pTripMetaData->getRiderRating()) ? 55.0 : 65.0;
+        cout << " Based on " << Util::ratingToString(pTripMetaData->getRiderRating()) << "rider rating, price = " << price << end;
+        return price;
+    }
+};
+
+class DriverMatchingStrategy
+{
+public:
+    virtual Driver *matchDriver(TripMetaData *pTripMetaData) = 0;
+};
+
+class LeastTimeBasedMatchingStrategy : public DriverMatchingStrategy
+{
+public:
+    Driver *matchDriver(TripMetaData *pTripMetaData)
+    {
+        DriverMgr *driverMgr = DriverMgr::getDriverMgr();
+
+        if ((driverMgr > getDriverMap().size()) == 0)
+            cout << "No driver found" << endl;
+        else
+        {
+            Driver *driver = ((driverMrg->getDriverMap()).begin())->second;
+            cout << " Driver = " << driver->getDriversName() << endl;
+            pTripMetaData->setDriverRating(Driver->getRating());
+            return driver;
+        }
+        return nullptr;
+    }
+};
+
+// only place which will know all the strategies. Hence extentable in case new strategy is introduced
+class StrategyMgr
+{
+    static StrategyMgr *strategyMgrInstance = nullptr;
+    static mutex mtx;
+    StrategyMgr() {}
+
+public:
+    static StrategyMgr *getStrategyMgrInstance()
+    {
+        if (strategyMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (strategyMgrInstance == nullptr)
+            {
+                strategyMgrInstance = new StrategyMgr();
+            }
+            mtx.unlock();
+        }
+        return strategyMgrInstance;
+    }
+
+    PricingStrategy *determinePricingStrategy(TripMetaData *metaData)
+    {
+        cout << "Based on location and other factor, setting pricing strategy" << endl;
+        return new RatingBasedPricingStrategy();
+    }
+    DriverMatchingStrategy *determineDriverMatchingStrategy(TripMetaData *metaData)
+    {
+        cout << "Based on location and other factor, setting driver matching strategy" << endl;
+        return new LeastTimeBasedMatchingStrategy();
+    }
+};
+
+class TripMetaData
+{
+    Location *srcLoc, *dstLoc;
+    RATING riderRating, driverRating;
+
+public:
+    TripMetaData(Location *pSrcLoc, Location *pDstLoc, RATING pRiderRating) : srcLoc(pSrcLoc), dstLoc(pDstLoc), riderRating(pRiderRating)
+    {
+        driverRating = RATING ::UNASSIGNED;
+    }
+
+    RATING getRiderRating()
+    {
+        return riderRating;
+    }
+
+    RATING getDriverRating()
+    {
+        return driverRating;
+    }
+    void setRiderRating(RATING pRating)
+    {
+        riderRating = pRating;
+    }
+    void setDriverRating(RATING pRating)
+    {
+        driverRating = pRating;
+    }
+};
+
+enum class TRIP_STATUS
+{
+    DRIVER_ON_THE_WAY,
+    STARTED,
+    COMPLETED,
+    CANCELLED
+};
+class Trip
+{
+    Rider *rider;
+    Driver *driver;
+    Location *srcLoc, *dstLoc;
+    TRIP_STATUS status;
+    int tripId;
+    double price;
+    PricingStrategy *pricingStrategy;
+    DriverMatchingStrategy *driverMatchingStrategy;
+    static int nextTripId = 1;
+
+public:
+    Trip(Rider *pRider, Driver *pDriver, Location *pSrcLoc, Location *pDstLoc, double pPrice, PricingStrategy *pPricingStrategy,
+         DriverMatchingStrategy *pDriverMatchingStrategy) : rider(pRider), driver(pDriver), srcLoc(pSrcLoc), dstLoc(pDstLoc),
+                                                            price(pPrice), pricingStrategy(pPricingStrategy), driverMatchingStrategy(pDriverMatchingStrategy)
+    {
+        tripId = nextTripId;
+        nextTripID++;
+        status = TRIP_STATUS::DRIVER_ON_THE_WAY;
+    }
+
+    void displayTripDetails()
+    {
+        cout << "TripId = " << tripId << endl;
+        cout << "Rider = " << rider->getRiderName << endl;
+        cout << "Driver = " << driver->getDriverName << endl;
+        cout << "Trip_status = " << status << endl;
+        cout << "Price = " << price << endl;
+        cout << "Source Location = " << srcLoc->getLongitude() << "," << srcLoc->getLatitude() << endl;
+        cout << "Destination Location = " << dstLoc->getLongitude() << "," << dstLoc->getLatitude() << endl;
+    }
+};
+
+class TripMgr
+{
+    static TripMgr *tripMgrInstance = nullptr;
+    static mutex mtx;
+    RiderMgr *riderMgr;
+    DriverMgr *driverMgr;
+    unordered_map<int, TripMetaData *> tripMetaDataInfo;
+    unordered_map<int, Trip *> tripInfo;
+    TripMgr()
+    {
+        riderMgr = RiderMgr::getRiderMgr();
+        driverMgr = DriverMgr::getDriverMap();
+    }
+    TripMgr(const TripMgr &);
+    TripMgr operator=(const TripMgr &);
+
+public:
+    static TripMgr *getTripMgr()
+    {
+        if (tripMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (tripMgrInstance == nullptr)
+            {
+                tripMgrInstance = new TripMgr();
+            }
+            mtx.unlock();
+        }
+        return tripMgrInstance;
+    }
+
+    void createTrip(Rider *pRider, Location *psrc, Location *pDst)
+    {
+        TripMetaData *metaData = new TripMetaData(psrc, pDst, pRider->getRating());
+        StrategyMgr *strategyMgr = StrategyMgr::getStrategyMgrInstance();
+        PricingStrategy *pricingStrategy = strategyMgr->determinePricingStrategy(metaData);
+        DriverMatchingStrategy *driverMatchingStrategy = strategyMgr->determineDriverMatchingStrategy(metaData);
+
+        Driver *driver = driverMatchingStrategy->matchDriver(metaData);
+        double tripPrice = pricingStrategy->calculatePrice(metaData);
+
+        Trip *trip = new Trip(pRider, driver, psrc, pDst, tripPrice, pricingStrategy, driverMatchingStrategy);
+        int tripId = trip->getTripId();
+        tripInfo[tripId] = trip;
+        tripMetaDataInfo[tripId] = metaData;
+    }
+
+    unordered_map<int, Trip *> getTripsMap()
+    {
+        return tripInfo;
+    }
+};
+
+int main()
+{
+    Rider *rider1 = new Rider("Titas", RATING::THREE);
+    Rider *rider2 = new Rider("Suku", RATING::FIVE);
+
+    RiderMgr *riderMgr = RiderMgr::getRiderMgr();
+    riderMgr->addRider(rider1);
+    riderMgr->addRider(rider2);
+
+    Driver *driver1 = new Driver("Sumit", RATING::THREE);
+    Driver *driver2 = new Driver("Vineet", RATING::FOUR);
+
+    DriverMgr *driverMgr = DriverMgr::getDriverMgr();
+    driverMgr->addDriver(driver1);
+    driverMgr->addDriver(driver2);
+
+    TripMgr *tripMgr = TripMgr::getTripMgr();
+
+    cout << " Creating Trip for Titas from (10,10) to (30,30)" << endl;
+    tripMgr->createTrip(rider1, new Location(10, 10), new Location(30, 30));
+
+    cout << " Creating Trip for Suku from (100,100) to (500,500)" << endl;
+    tripMgr->createTrip(rider2, new Location(100, 100), new Location(500, 500));
+
+    unordered_map<int, Trip *> tripsMap = tripMgr->getTripsMap();
+    for (auto val : tripsMap)
+    {
+        (val.second)->displayTripDetails();
+    }
+}
