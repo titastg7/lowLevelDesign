@@ -1,0 +1,334 @@
+/*##########################################################################
+System Requirements
+--------------------
+The Vending Machine is designed to:
+
+1. Inventory Management
+2. Process Orders: Handle customer product selections and dispense the correct product.
+3. Payment Handling: Manage simplified payment transactions for the product.
+
+---------------------------------------------------------------------------------
+
+## Core Use Cases
+--------------------
+
+1. Selecting a Product Type: Customers choose their preferred type of product.
+2. Checking Product Availability: Ensure Product is available.
+3. Dispensing Product: Dispense the chosen Product.
+4. Processing Payment: Handle the transaction for the Product purchase.
+
+##########################################################################*/
+
+/*
+     State Machine
+
+    NoCoinInsertedState -> CoinInsertedState -> DispenseState -> NoCoinInsertedState
+*/
+
+#include <bits/stdc++.h>
+using namespace std;
+
+class Product;   // Forward declaration
+class Inventory; // Forward declaration
+class VendingMachine;
+
+class State
+{
+public:
+    virtual void insertCoin(int amount) = 0;
+    virtual void pressButton(int aisleNo) = 0;
+    virtual void dispense(int aisleNo) = 0;
+};
+
+class CoinInsertedState : public State
+{
+    VendingMachine *vm;
+
+public:
+    CoinInsertedState(VendingMachine *pVm) : vm(pVm) {}
+    void insertCoin(int amount) override
+    {
+        vm->setAmount(vm->getAmount() + amount);
+    }
+
+    void pressButton(int aisleNo) override
+    {
+        Inventory *inventory = vm->getInventory();
+        Product *product = inventory->getProductAtAisle(aisleNo);
+
+        if (!vm->hasSufficientAmount(product->getPrice()))
+        {
+            cout << "Insufficient Amount" << endl;
+            return;
+        }
+        if (!inventory->isProductAvailable(product->getId()))
+        {
+            cout << "Product out of stock" << endl;
+            return;
+        }
+        vm->setCurrentVendingMachineState(vm->getDispenseState());
+    }
+    void dispense(int aisleNo) override
+    {
+        cout << "Please press the button to select a product" << endl;
+    }
+};
+
+class NoCoinInsertedState : public State
+{
+    VendingMachine *vm;
+
+public:
+    NoCoinInsertedState(VendingMachine *pVm) : vm(pVm) {}
+    void insertCoin(int amount) override
+    {
+        vm->setAmount(vm->getAmount() + amount);
+        vm->setCurrentVendingMachineState(vm->getCoinInsertedState());
+    }
+
+    void pressButton(int aisleNo) override
+    {
+        cout << "No Coin inserted" << endl;
+        return;
+    }
+    void dispense(int aisleNo) override
+    {
+        cout << "No Coin inserted" << endl;
+        return;
+    }
+};
+
+class DispenseState : public State
+{
+    VendingMachine *vm;
+
+public:
+    DispenseState(VendingMachine *pVm) : vm(pVm) {}
+    void insertCoin(int amount) override
+    {
+        cout << "Product getting dispensed" << endl;
+        return;
+    }
+
+    void pressButton(int aisleNo) override
+    {
+        cout << "Product getting dispensed" << endl;
+        return;
+    }
+    void dispense(int aisleNo) override
+    {
+        Inventory *inventory = vm->getInventory();
+        Product *product = inventory->getProductAtAisle(aisleNo);
+
+        inventory->deductProductCount(aisleNo);
+        double charge = vm->getAmount() - product->getPrice();
+        vm->setAmount(0.0);
+        vm->setCurrentVendingMachineState(vm->getNoCoinInsertedState());
+
+        cout << "Product at Aisle" << aisleNo << " is getting dispensed" << endl;
+    }
+};
+
+class VendingMachine
+{
+    NoCoinInsertedState *noCoinInsertedState;
+    CoinInsertedState *coinInsertedState;
+    DispenseState *dispenseState;
+    State *currentVendingMachineState;
+    Inventory *inventory;
+    double amount;
+    static int productCount;
+
+public:
+    VendingMachine(int productCount) : amount(0.0)
+    {
+        noCoinInsertedState = new NoCoinInsertedState(this);
+        coinInsertedState = new CoinInsertedState(this);
+        dispenseState = new DispenseState(this);
+        currentVendingMachineState = noCoinInsertedState;
+        inventory = new Inventory(productCount);
+    }
+
+    ~VendingMachine()
+    {
+        delete noCoinInsertedState;
+        delete coinInsertedState;
+        delete dispenseState;
+        delete inventory;
+    }
+
+    bool hasSufficientAmount(double expectedAmount)
+    {
+        return expectedAmount <= amount;
+    }
+    void setCurrentVendingMachineState(State *newState)
+    {
+        currentVendingMachineState = newState;
+    }
+
+    NoCoinInsertedState *getNoCoinInsertedState()
+    {
+        return noCoinInsertedState;
+    }
+
+    CoinInsertedState *getCoinInsertedState()
+    {
+        return coinInsertedState;
+    }
+
+    DispenseState *getDispenseState()
+    {
+        return dispenseState;
+    }
+    void setAmount(double newAmount)
+    {
+        amount = newAmount;
+    }
+    double getAmount()
+    {
+        return amount;
+    }
+    void pressButton(int aisleNo)
+    {
+        currentVendingMachineState->pressButton(aisleNo);
+        if (currentVendingMachineState == dispenseState)
+        {
+            currentVendingMachineState->dispenseProduct(aisleNo);
+        }
+    }
+
+    void insertCoin(int amount)
+    {
+        currentVendingMachineState->insertCoin(amount);
+    }
+
+    void addProduct(Product *product)
+    {
+        inventory->addProduct(product);
+    }
+
+    Inventory *getInventory() const
+    {
+        return inventory;
+    }
+};
+
+int VendingMachine::productCount = 2;
+
+class Product
+{
+    string id;
+    string name;
+    double price;
+
+public:
+    Product(string pId, string pName, double pPrice) : id(pId), name(pName), price(pPrice) {}
+    double getPrice()
+    {
+        return price;
+    }
+    void setPrice(double pPrice)
+    {
+        price = pPrice;
+    }
+    string getName()
+    {
+        return name;
+    }
+    void setName(string pName)
+    {
+        name = pName;
+    }
+    string getId()
+    {
+        return id;
+    }
+};
+
+class Inventory
+{
+    unordered_map<int, Product *> aisleNoToProduct;
+    unordered_map<string, int> productIdToCount;
+    queue<int> availableAisleSlot;
+
+public:
+    Inventory(int productCount)
+    {
+        for (int i = 1; i <= productCount; i++)
+        {
+            availableAisleSlot.push(i);
+        }
+    }
+
+    void addProduct(Product *product)
+    {
+        string productId = product->getId();
+        if (productIdToCount.find(productId) != productIdToCount.end())
+            productIdToCount[productId]++;
+        else
+        {
+            if (availableAisleSlot.size() == 0)
+            {
+                cout << " No Slots available. Cannot add new Product" << endl;
+                return;
+            }
+            aisleNoToProduct[availableAisleSlot.front()] = product;
+            availableAisleSlot.pop();
+            productIdToCount[productId] = 1;
+        }
+    }
+    Product *getProductAtAisle(int aisleNo)
+    {
+        return aisleNoToProduct[aisleNo];
+    }
+
+    bool isProductAvailable(string productId)
+    {
+        return (productIdToCount.count(productId) != 0);
+    }
+
+    void deductProductCount(int aisleNo)
+    {
+        string productId = (aisleNoToProduct[aisleNo])->getId();
+        productIdToCount[productId]--;
+        if (productIdToCount[productId] == 0)
+        {
+            productIdToCount.erase(productId);
+            availableAisleSlot.push(aisleNo);
+        }
+    }
+};
+
+int main()
+{
+    // Creating a vending machine with 2 product slots
+    VendingMachine vendingMachine(2);
+
+    // Adding some products to the vending machine
+    Product product1("001", "Soda", 1.50);
+    Product product2("002", "Chips", 1.00);
+    vendingMachine.addProduct(&product1);
+    vendingMachine.addProduct(&product2);
+
+    // Simulating user actions
+    cout << "User inserts $2.00 into the vending machine." << endl;
+    vendingMachine.insertCoin(2);
+
+    cout << "User presses the button for product at Aisle 1." << endl;
+    vendingMachine.pressButton(1);
+
+    cout << "User presses the button for product at Aisle 2." << endl;
+    vendingMachine.pressButton(2);
+
+    // Adding more products to the vending machine
+    Product product3("003", "Water", 0.75);
+    vendingMachine.addProduct(&product3);
+
+    cout << "User inserts $1.00 into the vending machine." << endl;
+    vendingMachine.insertCoin(1);
+
+    cout << "User presses the button for product at Aisle 3." << endl;
+    vendingMachine.pressButton(3);
+
+    return 0;
+}
