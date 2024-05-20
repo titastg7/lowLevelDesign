@@ -1,0 +1,294 @@
+/*##########################################################################
+System Requirements
+--------------------
+1. User Account Management: Manage user registrations, profiles, and subscriptions.
+2. Music Library Management: Maintain a library of songs, artists, and albums.
+3. Streaming and Playback: Enable streaming of music and manage playback settings.
+4. Playlist Management: Allow users to create and manage personalized playlists.
+5. User Recommendation System: Offer music suggestions based on preferences and listening history.
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Registering and Managing User Accounts
+2. Browsing and Streaming Music
+3. Creating and Editing Playlists
+4. Recommending Music
+5. Handling Subscriptions and Payments
+##########################################################################*/
+
+#include <bits/stdc++.h>
+using namespace std;
+
+// Forward declaration
+class User;
+
+// Enum representing subscription types
+enum class SubscriptionType
+{
+    FREE,
+    PREMIUM
+};
+
+// Class representing a subscription
+class Subscription
+{
+private:
+    SubscriptionType type;
+
+public:
+    Subscription(SubscriptionType type) : type(type) {}
+
+    SubscriptionType getType() const
+    {
+        return type;
+    }
+
+    void upgradeSubscription(SubscriptionType newType)
+    {
+        type = newType;
+    }
+};
+
+// Class representing a song
+class Song
+{
+private:
+    string title;
+    string artist;
+    string album;
+    string songId;
+
+public:
+    Song(const string &title, const string &artist, const string &album)
+        : title(title), artist(artist), album(album)
+    {
+        // Generate unique songId
+        songId = generateSongId();
+    }
+
+    string getTitle() const
+    {
+        return title;
+    }
+
+    string getArtist() const
+    {
+        return artist;
+    }
+
+    string getAlbum() const
+    {
+        return album;
+    }
+
+    string getSongId() const
+    {
+        return songId;
+    }
+
+private:
+    string generateSongId()
+    {
+        // Generate and return a unique songId (for simplicity, let's use a simple counter)
+        static int counter = 0;
+        return "SONG_" + to_string(++counter);
+    }
+};
+
+// Class representing a playlist
+class Playlist
+{
+private:
+    string name;
+    vector<Song *> songs;
+
+public:
+    Playlist(const string &name) : name(name) {}
+
+    void addSong(Song *song)
+    {
+        songs.push_back(song);
+    }
+
+    void removeSong(Song *song)
+    {
+        // Implement removal logic
+    }
+
+    void display() const
+    {
+        cout << "Playlist: " << name << endl;
+        for (const auto &song : songs)
+        {
+            cout << "Title: " << song->getTitle() << ", Artist: " << song->getArtist() << ", Album: " << song->getAlbum() << ", SongID: " << song->getSongId() << endl;
+        }
+    }
+};
+
+// Class representing a user
+class User
+{
+private:
+    string userId;
+    string email;
+    Subscription subscription;
+    vector<Playlist *> playlists;
+
+public:
+    User(const string &userId, const string &email, SubscriptionType subscriptionType)
+        : userId(userId), email(email), subscription(subscriptionType) {}
+
+    void createPlaylist(const string &name)
+    {
+        playlists.push_back(new Playlist(name));
+    }
+
+    void deletePlaylist(Playlist *playlist)
+    {
+        // Implement deletion logic
+    }
+
+    void displayPlaylists() const
+    {
+        cout << "User: " << userId << endl;
+        cout << "Subscription: " << (subscription.getType() == SubscriptionType::PREMIUM ? "Premium" : "Free") << endl;
+        cout << "Playlists:" << endl;
+        for (const auto &playlist : playlists)
+        {
+            playlist->display();
+        }
+    }
+
+    string getEmail() const
+    {
+        return email;
+    }
+
+    Subscription &getSubscription()
+    {
+        return subscription;
+    }
+
+    // Other methods for managing user account, subscriptions, etc.
+};
+
+// Class representing the music streaming service
+class MusicStreamingService
+{
+private:
+    unordered_map<string, Song *> songs;
+    unordered_map<string, User *> users;
+
+public:
+    void addUser(User *user)
+    {
+        users[user->getEmail()] = user;
+    }
+
+    void addSong(Song *song)
+    {
+        songs[song->getSongId()] = song;
+    }
+
+    void recommendMusic(User *user)
+    {
+        // Implement recommendation algorithm
+    }
+
+    vector<Song *> searchSongs(const string &title)
+    {
+        vector<Song *> matchedSongs;
+        for (const auto &it : songs)
+        {
+            if (it.second->getTitle() == title)
+            {
+                matchedSongs.push_back(it.second);
+            }
+        }
+        return matchedSongs;
+    }
+
+    void subscribeUser(const string &userId, SubscriptionType subscriptionType)
+    {
+        User *user = findUserById(userId);
+        if (user != nullptr)
+        {
+            user->getSubscription().upgradeSubscription(subscriptionType);
+        }
+    }
+
+    User *findUserById(const string &userId)
+    {
+        auto it = users.find(userId);
+        if (it != users.end())
+        {
+            return it->second;
+        }
+        return nullptr;
+    }
+    // Other methods for handling music library, streaming, subscriptions, etc.
+};
+
+int main()
+{
+    // Create music streaming service instance
+    MusicStreamingService streamingService;
+
+    // Create users with subscriptions
+    User *user1 = new User("user1", "user1@example.com", SubscriptionType::PREMIUM);
+    User *user2 = new User("user2", "user2@example.com", SubscriptionType::FREE);
+
+    // Add users to the streaming service
+    streamingService.addUser(user1);
+    streamingService.addUser(user2);
+
+    // Create songs
+    Song *song1 = new Song("Song 1", "Artist 1", "Album 1");
+    Song *song2 = new Song("Song 2", "Artist 2", "Album 2");
+
+    // Add songs to the streaming service
+    streamingService.addSong(song1);
+    streamingService.addSong(song2);
+
+    // Create playlists for users
+    user1->createPlaylist("Favorites");
+    user2->createPlaylist("Road Trip");
+
+    // Add songs to playlists
+    user1->displayPlaylists();
+    user2->displayPlaylists();
+
+    // Add songs to user1's playlist "Favorites"
+    Playlist *favoritesPlaylist = nullptr;
+    for (auto playlist : user1->getPlaylists())
+    {
+        if (playlist->getName() == "Favorites")
+        {
+            favoritesPlaylist = playlist;
+            break;
+        }
+    }
+
+    if (favoritesPlaylist != nullptr)
+    {
+        favoritesPlaylist->addSong(song1);
+        favoritesPlaylist->addSong(song2);
+    }
+    else
+    {
+        cout << "Favorites playlist not found for user1." << endl;
+    }
+
+    // Display updated playlists
+    cout << "After adding songs to playlists:" << endl;
+    user1->displayPlaylists();
+    user2->displayPlaylists();
+
+    // Clean up dynamically allocated memory
+    delete user1;
+    delete user2;
+    delete song1;
+    delete song2;
+
+    return 0;
+}
