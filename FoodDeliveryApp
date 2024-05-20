@@ -1,0 +1,748 @@
+/*##########################################################################
+System Requirements
+--------------------
+1. Manage restaurant profiles, menus, and availability.
+2. Order Processing: Enable customers to place orders and track their status.
+3. Payment Processing: Handle various modes of payment.
+4. Delivery Management: Assign orders to delivery agents and manage the delivery process.
+5. User Account Management: Handle customer and delivery agent profiles.
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Adding and Managing Restaurants
+2. Registering and Managing User and Delivery Agent Accounts
+3. Placing and Tracking Orders
+4. Assigning and Managing Deliveries
+5. Processing Payments
+##########################################################################*/
+
+#include <bits/stdc++.h>
+using namespace std;
+
+enum class RATING
+{
+    ONE,
+    TWO,
+    THREE,
+    FOUR,
+    FIVE,
+    UNASSIGNED
+};
+
+enum class Cuisine
+{
+    CHINESE,
+    NORTHINDIAN,
+    ITALIAN,
+    MEXICAN
+};
+class Location
+{
+    int longitude, latitude;
+
+public:
+    Location(int pLongitude, int pLatitude) : longitude(pLongitude), latitude(pLatitude)
+    {
+    }
+    int getLongitude()
+    {
+        return longitude;
+    }
+    int getLatitude()
+    {
+        return Latitude;
+    }
+};
+class User
+{
+    string name;
+    Location *location;
+
+public:
+    User(string pName, Location *pLoc) : name(pName), location(pLoc) {}
+    Location *getLocation()
+    {
+        return location;
+    }
+    string getId()
+    {
+        return name;
+    }
+};
+class UserMgr
+{
+    UserMgr() {}
+    static UserMgr *userMgrInstance;
+    static mutex mtx;
+    unordered_map<string, User *> usersMap;
+
+public:
+    static UserMgr *getUserMgr()
+    {
+        if (userMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (userMgrInstance == nullptr)
+            {
+                userMgrInstance = new UserMgr();
+            }
+            mtx.unlock();
+        }
+        return userMgrInstance
+    }
+    void addUser(string puserName, User *puser)
+    {
+        usersMap[pUserName] = pUser;
+    }
+    User *getUser(string puserName)
+    {
+        return usersMap[pUserName];
+    }
+};
+class DeliveryMetaData
+{
+    Location *userLoc, *restaurantLoc;
+    string orderId;
+    // weather conditions
+public:
+    DeliveryMetaData(string pOrderId, Location *pUserLoc, Location *pRestuarantLoc)
+        : orderId(pOrderId), userLoc(pUserLoc), restaurantLoc(pRestuarantLoc)
+    {
+    }
+    Location *getUserLoc()
+    {
+        return userLoc;
+    }
+    Location *getRestaurantLoc()
+    {
+        return restaurantLoc;
+    }
+};
+class IPartner
+{
+    RATING rating;
+    string name;
+    // kyc details
+public:
+    IPartner(string pName)
+    {
+        rating = RATING::UNASSIGNED;
+    }
+    string getName()
+    {
+        return name;
+    }
+    // void performKyc() = 0;
+};
+class DeliveryPartner : public IPartner
+{
+public:
+    DeliveryPartner(string pName) : IPartner(name);
+    void performDelivery(string pOrderId, DeliveryMetaData *metaData)
+    {
+        NotificationMgr *notificationMgr = NotificationMgr::getNotificationMgr();
+
+        double restaurantLocLatitude = pDeliveryMetaData->getRestaurantLoc()->getLatitude();
+        double restaurantLocLongitude = pDeliveryMetaData->getRestaurantLoc()->getLongitude();
+        notificationMgr->notify(pOrderId, name + " going to pick up delivery from location " + to_string(restaurantLocLatitude) + "," + to_string(restaurantLocLongitude));
+
+        this_thread::sleep_for(chrono::seconds(5));
+
+        notificationMgr->notify(pOrderId, name + " picked up delivery!");
+
+        this_thread::sleep_for(chrono::seconds(5));
+
+        notificationMgr->notify(pOrderId, name + " on the way to deliver!");
+
+        this_thread::sleep_for(chrono::seconds(5));
+
+        double userLocLatitude = pDeliveryMetaData->getUserLoc()->getLatitude();
+        double userLocLongitude = pDeliveryMetaData->getUserLoc()->getLongitude();
+        notificationMgr->notify(pOrderId, name + " reached the location " + to_string(userLocLatitude) + "," + to_string(userLocLongitude));
+
+        this_thread::sleep_for(chrono::seconds(5));
+
+        notificationMgr->notify(pOrderId, name + " delivered the order. CONGRATULATIONS!!");
+    }
+};
+
+class RestaurantOwner : public IPartner
+{
+public:
+    RestaurantOwner(string pName) : IPartner(name);
+};
+
+class DishAddOn
+{
+    string name, description;
+    double price;
+    vector<string> images;
+    bool isAvail;
+
+public:
+    DishAddOn(string pName, double pPrice) : name(pName), price(pPrice)
+    {
+    }
+    // getters setters
+    double getPrice()
+    {
+        return price;
+    }
+};
+class Dish
+{
+    string name, description;
+    double price;
+    vector<string> dishImages;
+    Cuisine cuisine;
+    vector<DishAddOn *> addOns;
+
+public:
+    Dish(string pName, Cuisine pCuisine, double pPrice) : name(pName), price(pPrice), cuisine(pCuisine)
+    {
+    }
+    void addAddOn(DishAddOn *pAddOn)
+    {
+        addons.push_back(pAddOn);
+    }
+    // remove add on function
+
+    double getPrice()
+    {
+        double totalPrice = price;
+        for (auto addOn : addons)
+            totalPrice += addOn->getPrice();
+        return totalPrice;
+    }
+    string getDescription() { return description; }
+    string getDishName() { return name; }
+    CUISINE getCuisine() { return cuisine; }
+};
+
+class Menu
+{
+    vector<Dish *> dishes;
+
+public:
+    Menu(vector<Dish *> pDishes) : dishes(pDishes)
+    {
+    }
+};
+class Restaurant
+{
+    string name;
+    bool isAvail;
+    Menu *menu;
+    Location *location;
+    RestaurantOwner *owner;
+
+public:
+    Restaurant(string pName, RestaurantOwner *pOwner, Location *pLoc) : name(pName), owner(pOwner), location(pLoc)
+    {
+        isAvail = false;
+        menu = nullptr; // can choose to pass in the constructor but keeping it apart for now
+    }
+    ~Restaurant()
+    {
+        delete menu;
+    }
+    void addMenu(Menu *pMenu)
+    {
+        menu = pMenu;
+    }
+    string getId()
+    {
+        return name;
+    }
+    Location *getLocation()
+    {
+        return location;
+    }
+    bool prepareFood(string pOrderId, unordered_map<Dish *, int> dishes)
+    {
+        cout << "Restaurant accepting the order and starting to prepare it" << endl;
+        NotificationMgr *notificationMgr = NotificationMgr::getNotificationMgr();
+        notificationMgr->notify(pOrderId, "Food is being prepared in restaurant");
+        this_thread::sleep_for(chrono::seconds(5));
+        notificationMgr->notify(pOrderId, "Food is ready and can be picked up from restaurant");
+        return true;
+    }
+};
+
+class IDeliveryPartnerMatchingStrategy
+{
+public:
+    virtual vector<DeliveryPartner *> matchDeliveryPartners(DeliveryMetaData *metaData) = 0;
+};
+
+class LocBasedDeliveryPartnerMatchingStrategy : public IDeliveryPartnerMatchingStrategy
+{
+public:
+    vector<DeliveryPartner *> matchDeliveryPartners(DeliveryMetaData *metaData)
+    {
+        DeliveryPartnerMgr *deliveryPartnerMgr = DeliveryPartnerMgr::getDeliveryPartnerMgr();
+
+        cout << "Quadtrees can be used to get nearest delivery partners, "
+             << "Delivery partner manager can be used to get details of partners. "
+             << "Returning all delivery partners for demo purposes for now." << endl;
+
+        vector<DeliveryPartner *> nearestDeliveryPartners;
+        for (auto deliveryPartnerDetails : deliveryPartnerMgr->getDeliveryPartnersMap())
+            nearestDeliveryPartners.push_back(deliveryPartnerDetails.second);
+        return nearestDeliveryPartners;
+    }
+};
+class StrategyMgr
+{
+    static StrategyMgr *strategyMgrInstance = nullptr;
+    static mutex mtx;
+    StrategyMgr() {}
+
+public:
+    static StrategyMgr *getStrategyMgrInstance()
+    {
+        if (strategyMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (strategyMgrInstance == nullptr)
+            {
+                strategyMgrInstance = new StrategyMgr();
+            }
+            mtx.unlock();
+        }
+        return strategyMgrInstance;
+    }
+
+    IDeliveryPartnerMatchingStrategy *determineDeliveryPartnerMatchingStrategy(DeliveryMetaData *metaData)
+    {
+        cout << "Based on location and other factor, setting pricing strategy" << endl;
+        return new LocBasedDeliveryPartnerMatchingStrategy();
+    }
+};
+
+class INotificationSender
+{
+public:
+    virtual void sendNotification(string pUserId, string pMsg) = 0;
+};
+
+class PushNotificationSender : public INotificationSender
+{
+public:
+    void sendNotification(string pUserId, string pMsg)
+    {
+        cout << "Push Notification for " << pUserId << " is " << pMsg << endl;
+    }
+};
+
+class SMSNotificationSender : public INotificationSender
+{
+public:
+    void sendNotification(string pUserId, string pMsg)
+    {
+        cout << "SMS Notification for " << pUserId << " is " << pMsg << endl;
+    }
+};
+
+class NotificationMgr
+{
+    unordered_map<string, vector<pair<string, INotificationSender *>>> notificationSendersMap;
+    static NotificationMgr *notificationMgrInstance = nullptr;
+    static mutex mtx;
+    NotificationMgr()
+    {
+    }
+
+public:
+    NotificationMgr *getNotificationMgr()
+    {
+        if (notificationMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (notificationMgrInstance == nullptr)
+            {
+                notificationMgrInstance = new NotificationMgr();
+            }
+            mtx.unlock();
+        }
+        return notificationMgrInstance;
+    }
+
+    void addNotificationSender(string pOrderId, string pUserId, INotificationSender *pNotificationSender)
+    {
+        if (find(notificationSendersMap[pOrderId].begin(), notificationSendersMap[pOrderId].end(), make_pair(pUserId, pNotificationSender)) == notificationSendersMap[pOrderId].end())
+        {
+            // making sure the sender is already not there in the vector
+            // if this check is not put, then multiple notifications will be sent by same sender
+            notificationSendersMap[pOrderId].push_back(make_pair(pUserId, pNotificationSender));
+        }
+    }
+    void removeNotificationSender(string pOrderId, string pUserId, INotificationSender *pNotificationSender)
+    {
+        auto senderPos = find(notificationSendersMap[pOrderId].begin(),
+                              notificationSendersMap[pOrderId].end(), make_pair(pUserId, pNotificationSender));
+        if (senderPos != notificationSendersMap[pOrderId].end())
+        {
+            notificationSendersMap[pOrderId].erase(senderPos);
+        }
+    }
+    void notify(string pOrderId, string &msg)
+    {
+        for (auto sender : notificationSendersMap[pOrderId])
+            sender.second->sendNotification(sender.first, pMsg)
+    }
+    void notifyParticularUser(string pUserId, string &msg, INotificationSender *sender)
+    {
+        sender->sendNotification(pUserId, msg);
+    }
+};
+
+class RestaurantMgr
+{
+    unordered_map<string, Restaurant *> restaurantMap;
+    static RestaurantMgr *restaurantMgrInstance = nullptr;
+    static mutex mtx;
+    RestaurantMgr()
+    {
+    }
+
+public:
+    RestaurantMgr *getRestaurantMgr()
+    {
+        if (restaurantMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (restaurantMgrInstance == nullptr)
+            {
+                restaurantMgrInstance = new RestaurantMgr();
+            }
+            mtx.unlock();
+        }
+        return restaurantMgrInstance;
+    }
+    void addRestaurant(string pRestaurantName, Restaurant *pRestaurant)
+    {
+        restaurantMap[pRestaurantName] = pRestaurant;
+    }
+    Restaurant *getRestaurant(string pRestaurantName)
+    {
+        return restaurantMap[pRestaurantName];
+    }
+};
+
+class FoodMgr
+{
+    static FoodMgr *foodMgrInstance = nullptr;
+    static mutex mtx;
+    FoodMgr()
+    {
+    }
+
+public:
+    FoodMgr *getFoodMgr()
+    {
+        if (foodMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (foodMgrInstance == nullptr)
+            {
+                foodMgrInstance = new FoodMgr();
+            }
+            mtx.unlock();
+        }
+        return foodMgrInstance;
+    }
+    void prepareFood(string pOrderId, string pRestaurantId, unordered_map<Dish *, int> pDishes)
+    {
+        RestaurantMgr *restaurantMgr = RestaurantMgr::getRestaurantMgr();
+        Restaurant *restaurant = restaurantMgr->getRestaurant(pRestaurantId);
+        restaurant->prepareFood(pOrderId, pDishes);
+
+        // Restaurant should receive the delivery partner's notifications.
+        // The order in which the restaurant, user & delivery partner are added to the notification mgr
+        // will decide which notifications they receive
+        addRestaurantForNotificationUpdates(pOrderId, pRestaurantId);
+    }
+    void addRestaurantForNotificationUpdates(string pOrderId, string pRestaurantId)
+    {
+        NotificationMgr *notificationMgr = NotificationMgr::getNotificationMgr();
+        // we can add push or whatsapp notifications in same way.
+        // Basically, we are keeping all notifications customisable
+        notificationMgr->addNotificationSender(pOrderId, pRestaurantId, new PushNotificationSender());
+    }
+};
+class DeliveryMgr
+{
+    static DeliveryMgr *deliveryMgrInstance = nullptr;
+    static mutex mtx;
+    DeliveryMgr()
+    {
+    }
+
+public:
+    DeliveryMgr *getDeliveryMgr()
+    {
+        if (deliveryMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (deliveryMgrInstance == nullptr)
+            {
+                deliveryMgrInstance = new DeliveryMgr();
+            }
+            mtx.unlock();
+        }
+        return deliveryMgrInstance;
+    }
+    void manageDelivery(string pOrderId, DeliveryMetaData *data)
+    {
+        StrategyMgr *strategyMgr = StrategyMgr::getStrategyMgr();
+
+        IDeliveryPartnerMatchingStrategy *partnerMatchingStrategy =
+            strategyMgr->determineDeliveryPartnerMatchingStrategy(pDeliveryMetaData);
+
+        vector<DeliveryPartner *> deliverypartners =
+            partnerMatchingStrategy->matchDeliveryPartners(pDeliveryMetaData);
+
+        NotificationMgr *notificationMgr = NotificationMgr::getNotificationMgr();
+        // Send push notifications to the nearest delivery partners
+        for (auto deliveryPartner : deliverypartners)
+        {
+            notificationMgr->notifyParticularUser(deliveryPartner->getName(), "Delivery Request",
+                                                  new PushNotificationSender());
+        }
+
+        DeliveryPartner *assignedDeliveryPartner = deliverypartners[0];
+
+        // Assume first delivery partner accepted it
+        notificationMgr->notify(pOrderId, "Delivery Partner " + assignedDeliveryPartner->getName() +
+                                              " assigned for the order " + pOrderId);
+
+        assignedDeliveryPartner->performDelivery(pOrderId, pDeliveryMetaData);
+    }
+};
+
+enum class ORDER_STATUS
+{
+    PLACED,
+    OUT_FOR_DELIVERY,
+    PREPARING,
+    DELIVERED
+};
+
+class Order
+{
+    User *user;
+    Restaurant *restaurant;            // we can choose to store only ids of user and restaurant for further decoupling
+    unordered_map<Dish *, int> dishes; // quantity for each dish
+    OrderStatus status;
+    string discountCode;
+    string paymentId;
+
+public:
+    Order(User *pUser, Restaurant *pRestaurant, unordered_map<Dish *, int> pDishes) : user(pUser), restaurant(pRestaurant), dishes(pDishes)
+    {
+        status = ORDER_STATUS::PLACED;
+    }
+
+    string getUserId()
+    {
+        return user->getId();
+    }
+    string getRestaurantId()
+    {
+        return restaurant->getId();
+    }
+    unordered_map<Dish *, int> getDishes()
+    {
+        return dishes;
+    }
+
+    /*
+        Another way to get the location would be to get the entire user or location object and get location
+        from there.	BUT we should not expose info that is not required. Location is imp
+        info for delivery and is imp for order. So, it made sense to put getters for both locations here
+    */
+    Location *getUserLocation()
+    {
+        return user->getLocation();
+    }
+    Location *getRestaurantLocation()
+    {
+        return restaurant->getLocation();
+    }
+};
+
+class OrderMgr
+{
+    static OrderMgr *orderMgrInstance = nullptr;
+    static mutex mtx;
+    unordered_map<string, Order *> ordersMap;
+    FoodMgr *foodMgr;
+    DeliveryMgr *deliveryMrg;
+    OrderMgr()
+    {
+        deliveryMgr = DeliveryMgr::getDeliveryMgr();
+        foodMgr = FoodMgr::getFoodMgr();
+    }
+
+public:
+    OrderMgr *getOrderMgr()
+    {
+        if (orderMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (orderMgrInstance == nullptr)
+            {
+                orderMgrInstance = new OrderMgr();
+            }
+            mtx.unlock();
+        }
+        return orderMgrInstance;
+    }
+    void manageDelivery(string pOrderId, Order *pOrder)
+    {
+        DeliveryMetaData *metaData = new DeliveryMetaData(pOrderId, pOrder->getUserLocation(),
+                                                          pOrder->getRestaurantLocation());
+        deliveryMgr->manageDelivery(pOrderId, metaData);
+    }
+    void manageFood(string pOrderId, Order *pOrder)
+    {
+        foodMgr->prepareFood(pOrderId, pOrder->getRestaurantId(), pOrder->getDishes());
+        return true;
+    }
+
+    void createOrder(string pOrderId, Order *pOrder)
+    {
+        addUserForNotificationUpdates(pOrderId, pOrder);
+
+        manageFood(pOrderId, pOrder);
+
+        manageDelivery(pOrderId, pOrder);
+    }
+    Order *getOrder(string pOrderId)
+    {
+        return ordersMap[pOrderId];
+    }
+};
+
+class DeliveryPartnerMgr
+{
+    static DeliveryPartnerMgr *deliveryPartnerMgrInstance = nullptr;
+    unordered_map<string, DeliveryPartner *> deliveryPartnersMap;
+    static mutex mtx;
+    DeliveryMgr()
+    {
+    }
+
+public:
+    DeliveryPartnerMgr *getdeliveryPartnerMgr()
+    {
+        if (deliveryPartnerMgrInstance == nullptr)
+        {
+            mtx.lock();
+            if (deliveryPartnerMgrInstance == nullptr)
+            {
+                deliveryPartnerMgrInstance = new DeliveryPartnerMgr();
+            }
+            mtx.unlock();
+        }
+        return deliveryPartnerMgrInstance;
+    }
+    void addDeliveryPartner(string pDeliveryPartnerName, DeliveryPartner *pDeliveryPartner)
+    {
+        deliveryPartnersMap[pDeliveryPartnerName] = pDeliveryPartner;
+    }
+    DeliveryPartner getDeliveryPartner(string pDeliveryPartnerName)
+    {
+        return deliveryPartnersMap[pDeliveryPartnerName];
+    }
+    unordered_map<string, DeliveryPartner *> getDeliveryPartnersMap()
+    {
+        return deliveryPartnersMap;
+    }
+};
+
+class DeliveryChargeCalculationStrategy
+{
+public:
+    virtual double calculateDeliveryCharge(DeliveryMetaData *pDeliveryMetaData) = 0;
+};
+
+class LocBasedDeliveryChargecalculationStrategy : public DeliveryChargeCalculationStrategy
+{
+public:
+    double calculateDeliveryCharge(DeliveryMetaData *pDeliveryMetaData)
+    {
+        cout << "Delivery charge is decided based on location. Setting to 20 as default value for now" << endl;
+        return 20.0;
+    }
+};
+
+int main()
+{
+    // Chinese Restaurant
+    RestaurantOwner *owner1 = new RestaurantOwner("owner1");
+    Restaurant *chineseRest = new Restaurant("chinese vala", owner1, new Location(1, 2));
+    Dish *noodles = new Dish("noodles", CUISINE::CHINESE, 200);
+    noodles->addAddOn({new DishAddOn("premium sauce", 20)});
+    Dish *fried_rice = new Dish("fried rice", CUISINE::CHINESE, 180);
+    Dish *spring_rolls = new Dish("spring rolls", CUISINE::CHINESE, 120);
+    Menu *chinese_menu = new Menu({noodles, fried_rice, spring_rolls});
+    chineseRest->addMenu(chinese_menu);
+
+    // South Indian Restaurant
+    RestaurantOwner *owner2 = new RestaurantOwner("owner2");
+    Restaurant *southIndianRest = new Restaurant("south indian food", owner2, new Location(2, 3));
+    Dish *idli = new Dish("idli", CUISINE::SOUTH_INDIAN, 200);
+    Dish *dosa = new Dish("dosa", CUISINE::SOUTH_INDIAN, 180);
+    Dish *uthappam = new Dish("uthappam", CUISINE::SOUTH_INDIAN, 120);
+    Menu *south_indian_menu = new Menu({idli, dosa, uthappam});
+    southIndianRest->addMenu(south_indian_menu);
+
+    // Note that restaurant owners can exist without restaurants, we have used aggregation relationship
+    // This can lead to owners being present with no restaurants and thus not added in restaurant manager
+    // This is how we have designed and we should know consequences of the way we have structured.
+
+    RestaurantMgr *restaurantMgr = RestaurantMgr::getRestaurantMgr();
+    restaurantMgr->addRestaurant("chinese vala", chineseRest);
+    restaurantMgr->addRestaurant("south indian food", southIndianRest);
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    DeliveryPartner *alpha = new DeliveryPartner("alpha");
+    DeliveryPartner *beta = new DeliveryPartner("beta");
+    DeliveryPartner *gamma = new DeliveryPartner("gamma");
+
+    DeliveryPartnerMgr *deliveryPartnerMgr = DeliveryPartnerMgr::getDeliveryPartnerMgr();
+    deliveryPartnerMgr->addDeliveryPartner("alpha", alpha);
+    deliveryPartnerMgr->addDeliveryPartner("beta", beta);
+    deliveryPartnerMgr->addDeliveryPartner("gamma", gamma);
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    User *keerti = new User("keerti", new Location(10, 11));
+    User *gaurav = new User("gaurav", new Location(13, 14));
+    User *yogita = new User("yogita", new Location(15, 16));
+    // users can exist without usermgr as well. That's why it is an aggregation relationship
+
+    UserMgr *userMgr = UserMgr::getUserMgr();
+    userMgr->addUser("keerti", keerti);
+    userMgr->addUser("gaurav", gaurav);
+    userMgr->addUser("yogita", yogita);
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // I am passing same dish object that was created by res, for C++ folks - it should be different dish object
+
+    unordered_map<Dish *, int> cart;
+    cart.insert({noodles, 2});
+    cart.insert({fried_rice, 1});
+    Order *order1 = new Order(keerti, chineseRest, cart);
+
+    OrderMgr *orderMgr = OrderMgr::getOrderMgr();
+    orderMgr->createOrder("order1", order1); // Ideally, the id should be created in order manager when order is created
+                                             // This is just for simplicity purposes and has been mentioned in the class as well
+                                             // We have done same for all ids - user, restaurant, delivery partner etc.
+
+    return 0;
+}
