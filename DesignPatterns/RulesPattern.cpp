@@ -191,8 +191,9 @@ int main()
 
     // Create a Basket
     Basket basket;
-    basket.addItem(Item("Laptop", 1200.00));
-    basket.addItem(Item("Phone", 800.00));
+    basket.addItem(Item("The Shinning Book", 5.0));
+    basket.addItem(Item("Hereditary Bluray", 15.00));
+    basket.addItem(Item("The extremely expensive new Iphone", 1400.00));
 
     // Process the basket with the promotion engine
     engine.process(basket);
