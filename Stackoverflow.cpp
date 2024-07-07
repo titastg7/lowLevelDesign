@@ -162,7 +162,7 @@ public:
         User *user = findUser(username);
         if (user)
         {
-            questions.emplace_back(title, content, *user);
+            questions.push_back(user->postQuestion(title, content));
             return &questions.back();
         }
 
@@ -178,17 +178,15 @@ public:
     }
 
     // Answering Questions
-    Answer *postAnswer(const std::string &username, const std::string &questionTitle, const std::string &answerText)
+    Answer *postAnswer(string &username, string &questionTitle, string &answerText)
     {
         User *user = findUser(username);
         Question *question = findQuestion(questionTitle);
 
         if (user && question)
         {
-            question->addAnswer(Answer(*user, answerText));
-            return &question->addAnswer(Answer(*user, answerText));
+            return user->postAnswer(question,answerText);
         }
-
         return nullptr;
     }
 
