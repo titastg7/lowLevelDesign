@@ -300,8 +300,8 @@ int main()
     User *user2 = facade.registerUser("USER002", "Bob", "bob@example.com");
 
     // Create payment processors
-    IPayment *paymentProcessor1 = new CreditCard("1234 5678 9876 5432");
-    IPayment *paymentProcessor2 = new Netbanking("Savings Account");
+    PaymentStrategy* creditCardPayment = new CreditCard("1234 5678 9876 5432");
+    PaymentStrategy* netbankingPayment = new Netbanking("user@example.com");
 
     // Book tickets with different payment methods
     Ticket *ticket1 = facade.bookTicket(concert1, user1, 2, creditCardPayment); // User 1 books 2 tickets
