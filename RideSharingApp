@@ -88,33 +88,6 @@ public:
     }
 };
 
-class RiderMrg
-{
-    static mutex mtx;
-    RiderMrg *riderMrgInstance = nullptr;
-    unordered_map<string, Rider *> riderMap;
-    RiderMrg()
-    {
-    }
-    RiderMgr(const RiderMgr &);
-    RiderMgr operator=(const RiderMgr &);
-
-public:
-    static RiderMgr *getRiderMgr()
-    {
-        if (riderMrgInstance == nullptr)
-        {
-            mtx.lock();
-            if (riderMrgInstance == nullptr)
-            {
-                riderMrgInstance = new RiderMgr();
-            }
-            mtx.unlock();
-        }
-        return riderMrgInstance;
-    }
-};
-
 class RiderMgr
 {
     static mutex mtx;
