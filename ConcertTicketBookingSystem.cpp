@@ -210,14 +210,14 @@ public:
                 delete ticket;
         }
     }
-    Event *createConcert(const std::string &name, const std::string &venue, const std::string &date, int maxCapacity)
+    Event *createConcert(string &name, string &venue, string &date, int maxCapacity,double pricePerTicket)
     {
-        Event *concert = new Concert(name, venue, date, maxCapacity);
+        Event* concert = new Concert(name, venue, date, maxCapacity, pricePerTicket);        
         events.push_back(concert);
         return concert;
     }
 
-    User *registerUser(const std::string &userId, const std::string &name, const std::string &email)
+    User *registerUser(string &userId, string &name, string &email)
     {
         User *user = new ConcertUser(userId, name, email);
         users.push_back(user);
@@ -293,9 +293,8 @@ int main()
     TicketBookingFacade facade;
 
     // Create events
-    Event *concert1 = facade.createConcert("Rock Fest", "Main Arena", "2024-08-15", 100);
-    Event *concert2 = facade.createConcert("Pop Night", "City Hall", "2024-09-20", 150);
-
+    Event *concert1 = facade.createConcert("Rock Fest", "Main Arena", "2024-08-15", 100,50.0);
+    Event *concert2 = facade.createConcert("Pop Night", "City Hall", "2024-09-20", 150, 60.0);
     // Register users
     User *user1 = facade.registerUser("USER001", "Alice", "alice@example.com");
     User *user2 = facade.registerUser("USER002", "Bob", "bob@example.com");
