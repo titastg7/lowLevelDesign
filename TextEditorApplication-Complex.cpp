@@ -409,3 +409,22 @@ int main()
 
     return 0;
 }
+
+/*
+Memento Pattern:
+-----------------------
+EditorState Class: This class represents the state of the Editor (originator) and stores the content vector.
+Editor Class: Acts as the originator. It has methods to modify the content (insert, delete, copy, paste) and methods (save and restore)
+to save and restore its state using EditorState.
+
+EditorHistory Class: Acts as the caretaker. It maintains undoHistory and redoHistory stacks to manage saved states (mementos).
+It provides methods (saveState, undo, redo, canUndo, canRedo) to save, retrieve, and manage states.
+
+Command Pattern:
+------------------------
+Command Interface: The Command class declares execute and undo methods.
+Concrete Commands: InsertTextCommand, DeleteLineCommand, DeleteRangeCommand, CopyTextCommand, and PasteTextCommand implement
+the Command interface. Each command encapsulates a specific operation (execute) on the Editor and provides an undo method to
+reverse that operation.
+
+*/
