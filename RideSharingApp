@@ -226,7 +226,7 @@ public:
         {
             Driver *driver = ((driverMrg->getDriverMap()).begin())->second;
             cout << " Driver = " << driver->getDriversName() << endl;
-            pTripMetaData->setDriverRating(Driver->getRating());
+            pTripMetaData->setDriverRating(driver->getRating());
             return driver;
         }
         return nullptr;
@@ -369,9 +369,9 @@ public:
         return tripMgrInstance;
     }
 
-    void createTrip(Rider *pRider, Location *psrc, Location *pDst)
+    void createTrip(Rider *pRider, Location *pSrc, Location *pDst)
     {
-        TripMetaData *metaData = new TripMetaData(psrc, pDst, pRider->getRating());
+        TripMetaData *metaData = new TripMetaData(pSrc, pDst, pRider->getRating());
         StrategyMgr *strategyMgr = StrategyMgr::getStrategyMgrInstance();
         PricingStrategy *pricingStrategy = strategyMgr->determinePricingStrategy(metaData);
         DriverMatchingStrategy *driverMatchingStrategy = strategyMgr->determineDriverMatchingStrategy(metaData);
@@ -379,7 +379,7 @@ public:
         Driver *driver = driverMatchingStrategy->matchDriver(metaData);
         double tripPrice = pricingStrategy->calculatePrice(metaData);
 
-        Trip *trip = new Trip(pRider, driver, psrc, pDst, tripPrice, pricingStrategy, driverMatchingStrategy);
+        Trip *trip = new Trip(pRider, driver, pSrc, pDst, tripPrice, pricingStrategy, driverMatchingStrategy);
         int tripId = trip->getTripId();
         tripInfo[tripId] = trip;
         tripMetaDataInfo[tripId] = metaData;
