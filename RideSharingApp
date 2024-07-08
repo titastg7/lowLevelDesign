@@ -82,6 +82,10 @@ public:
     {
         return rating;
     }
+    void updateAvailable(bool pAvail)
+    {
+        avail = pAvail;
+    }
 };
 
 class RiderMrg
