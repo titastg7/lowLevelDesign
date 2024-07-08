@@ -220,7 +220,7 @@ public:
     {
         DriverMgr *driverMgr = DriverMgr::getDriverMgr();
 
-        if ((driverMgr > getDriverMap().size()) == 0)
+        if ((driverMgr->getDriverMap().size()) == 0)
             cout << "No driver found" << endl;
         else
         {
