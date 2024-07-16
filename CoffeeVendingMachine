@@ -227,3 +227,11 @@ int main()
 
     return 0;
 }
+
+
+/* Notes:
+    Factory Method Pattern: For creating coffee recipe instances.
+    Strategy Pattern: For payment processing.
+    Dependency Injection: For injecting dependencies into the coffee vending machine.
+    Template Method Pattern: For defining the steps to make coffee, which can be overridden by specific recipes.
+*/
