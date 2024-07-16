@@ -4,7 +4,8 @@ System Requirements
 Valet parking system
 --------------------
 
-Design a system responsible for indicating to a valet, which spots to park cars in, issue tickets, and accept tickets to inform a valet which parking spot a car is located in.
+Design a system responsible for indicating to a valet, which spots to park cars in, issue tickets, and accept tickets to
+inform a valet which parking spot a car is located in.
 
 Details:
 
@@ -77,16 +78,6 @@ public:
     {
         return available;
     }
-    bool canPark(const Car &car) const
-    {
-        if (car.getType() == CarType::SUV)
-        {
-            return spotType == SpotType::SUV;
-        }
-        else
-            return true;
-    }
-
     SpotType getSpotType() const
     {
         return spotType;
@@ -109,6 +100,163 @@ private:
     SpotType spotType;
     bool available;
 };
+
+// Strategy interface for parking
+class ParkingStrategy
+{
+public:
+    virtual int findSpot(vector<ParkingSpot> &parkingSpots, const Car &car) const = 0;
+    virtual ~ParkingStrategy() = default;
+};
+
+// Concrete strategy for SUV cars
+class SUVCarParkingStrategy : public ParkingStrategy
+{
+public:
+    int findSpot(vector<ParkingSpot> &parkingSpots, const Car &car) const override
+    {
+        for (auto &spot : parkingSpots)
+        {
+            if (spot.isAvailable() && spot.getSpotType() == SpotType::SUV)
+            {
+                spot.occupySpot();
+                return spot.getSpotNumber();
+            }
+        }
+        // Finally try EV spots
+        for (auto &spot : parkingSpots)
+        {
+            if (spot.isAvailable() && spot.getSpotType() == SpotType::EV)
+            {
+                spot.occupySpot();
+                return spot.getSpotNumber();
+            }
+        }
+        return -1; // No available SUV spot found
+    }
+};
+
+// Concrete strategy for sedan cars
+class SedanCarParkingStrategy : public ParkingStrategy
+{
+public:
+    int findSpot(vector<ParkingSpot> &parkingSpots, const Car &car) const override
+    {
+        // First try regular spots
+        for (auto &spot : parkingSpots)
+        {
+            if (spot.isAvailable() && spot.getSpotType() == SpotType::Regular)
+            {
+                spot.occupySpot();
+                return spot.getSpotNumber();
+            }
+        }
+
+        // Then try SUV spots
+        if (car.getType() == CarType::SUV)
+        {
+            for (auto &spot : parkingSpots)
+            {
+                if (spot.isAvailable() && spot.getSpotType() == SpotType::SUV)
+                {
+                    spot.occupySpot();
+                    return spot.getSpotNumber();
+                }
+            }
+        }
+
+        // Finally try EV spots
+        for (auto &spot : parkingSpots)
+        {
+            if (spot.isAvailable() && spot.getSpotType() == SpotType::EV)
+            {
+                spot.occupySpot();
+                return spot.getSpotNumber();
+            }
+        }
+
+        return -1; // No available spot found
+    }
+};
+
+// Concrete strategy for electric cars
+class ElectricCarParkingStrategy : public ParkingStrategy
+{
+public:
+    int findSpot(vector<ParkingSpot> &parkingSpots, const Car &car) const override
+    {
+        // First try to find an available EV spot
+        for (auto &spot : parkingSpots)
+        {
+            if (spot.isAvailable() && spot.getSpotType() == SpotType::EV)
+            {
+                spot.occupySpot();
+                return spot.getSpotNumber();
+            }
+        }
+
+        // If no EV spot available, delegate to SUV or Sedan strategy based on car type
+        ParkingStrategy *fallbackStrategy = nullptr;
+        if (car.getType() == CarType::SUV)
+        {
+            fallbackStrategy = new SUVCarParkingStrategy();
+        }
+        else
+        {
+            fallbackStrategy = new SedanCarParkingStrategy();
+        }
+
+        int spotNumber = fallbackStrategy->findSpot(parkingSpots, car);
+        delete fallbackStrategy;
+        return spotNumber;
+    }
+};
+
+// Singleton class to manage parking strategies
+class StrategyManager
+{
+    static StrategyManager *instance;
+    static mutex mtx;
+
+    StrategyManager() {} // Private constructor to prevent instantiation
+
+public:
+    static StrategyManager *getInstance()
+    {
+        if (instance == nullptr)
+        {
+            mtx.lock();
+            if (instance == nullptr)
+            {
+                instance = new StrategyManager();
+            }
+            mtx.unlock();
+        }
+        return instance;
+    }
+
+    StrategyManager(const StrategyManager &) = delete;
+    void operator=(const StrategyManager &) = delete;
+
+    ParkingStrategy *getStrategy(const Car &car)
+    {
+        if (car.isElectricCar())
+        {
+            return new ElectricCarParkingStrategy();
+        }
+        else if (car.getType() == CarType::SUV)
+        {
+            return new SUVCarParkingStrategy();
+        }
+        else
+        {
+            return new SedanCarParkingStrategy();
+        }
+    }
+};
+
+StrategyManager *StrategyManager::instance = nullptr;
+mutex StrategyManager::mtx;
 
 // Singleton Class representing the valet parking system
 class ValetParkingSystem
@@ -149,30 +297,11 @@ public:
 
     int issueTicket(const Car &car)
     {
-        // First check for EV spots if the car is electric
-        if (car.isElectricCar())
-        {
-            for (auto &spot : parkingSpots)
-            {
-                if (spot.isAvailable() && spot.getSpotType() == SpotType::EV)
-                {
-                    spot.occupySpot();
-                    return spot.getSpotNumber();
-                }
-            }
-        }
-
-        // If no EV spots available, check for SUV or Sedan spots
-        for (auto &spot : parkingSpots)
-        {
-            if (spot.isAvailable() && spot.canPark(car))
-            {
-                spot.occupySpot();
-                return spot.getSpotNumber();
-            }
-        }
-
-        return -1; // No available spot found
+        StrategyManager *strategyManager = StrategyManager::getInstance();
+        ParkingStrategy *strategy = strategyManager->getStrategy(car);
+        int spotNumber = strategy->findSpot(parkingSpots, car);
+        delete strategy;
+        return spotNumber;
     }
 
     void acceptTicket(int ticketNumber)
@@ -196,23 +325,53 @@ int main()
     ValetParkingSystem *valetSystem = ValetParkingSystem::getInstance();
 
     // Initialize parking spots
-    vector<pair<int, SpotType>> spotsData = {{1, SpotType::Regular}, {2, SpotType::Regular}, {3, SpotType::SUV}, {4, SpotType::EV}};
+    vector<pair<int, SpotType>> spotsData = {{1, SpotType::Regular}, {2, SpotType::Regular}, {3, SpotType::Regular}, {4, SpotType::EV}};
     valetSystem->initializeParkingSpots(spotsData);
 
     // Create cars
     Car sedanCar(CarType::Sedan, false); // Non-electric Sedan
     Car suvEvCar(CarType::SUV, true);    // Electric SUV
+    Car suvCar(CarType::SUV, false);
 
     // Issue tickets
     int ticket1 = valetSystem->issueTicket(sedanCar);
     int ticket2 = valetSystem->issueTicket(suvEvCar);
+    int ticket3 = valetSystem->issueTicket(suvCar);
 
     cout << "Ticket 1: " << ticket1 << endl; // Expected output: Ticket 1: 1
-    cout << "Ticket 2: " << ticket2 << endl; // Expected output: Ticket 2: 3
+    cout << "Ticket 2: " << ticket2 << endl; // Expected output: Ticket 2: 4
+    cout << "Ticket 3: " << ticket3 << endl; // Expected output: Ticket 3: -1
 
     // Accept tickets
     valetSystem->acceptTicket(ticket1);
     valetSystem->acceptTicket(ticket2);
+    ticket3 = valetSystem->issueTicket(suvCar);
+    cout << "Ticket 3: " << ticket3 << endl; // Expected output: Ticket 3: 4
 
+    valetSystem->acceptTicket(ticket3);
     return 0;
 }
+
+/*
+Notes:
+ Strategy Pattern used.
+
+Application in the Code:
+
+1. Context (ValetParkingSystem):
+    Acts as a client that needs to perform parking based on different strategies depending on the type of car.
+
+2. Strategies (ParkingStrategy, ElectricCarParkingStrategy, SUVCarParkingStrategy, SedanCarParkingStrategy):
+
+    Each strategy (ParkingStrategy and its derivatives) encapsulates a parking algorithm (findSpot) tailored
+    for different types of cars (Electric, SUV, Sedan).
+    Strategies are interchangeable at runtime, allowing the ValetParkingSystem to select the appropriate
+    parking strategy dynamically based on the car type.
+
+3. Strategy Manager (StrategyManager):
+
+    Provides a centralized place (getStrategy) to instantiate and provide strategies (ParkingStrategy)
+    to the ValetParkingSystem.
+    Encapsulates the creation of strategies, promoting the Single Responsibility Principle by separating
+    strategy selection logic from the ValetParkingSystem.
+*/
