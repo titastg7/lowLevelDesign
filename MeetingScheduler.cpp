@@ -1,3 +1,23 @@
+/*##########################################################################
+System Requirements
+--------------------
+1. Room Management
+2. Meeting Scheduling
+3. Calendar Management
+4. User Interaction
+---------------------------------------------------------------------------------
+Core Use Cases
+--------------
+1. Basic Room Booking :  Schedule a meeting in an available room for a specific day and time.
+2. Sequential Bookings in the Same Room
+3. Overlapping Meeting Detection
+4. Multiple Rooms Booking
+5. Cross-Day Booking
+6. Dynamically add or remove rooms from the scheduler.
+6. Check No Available Rooms
+
+##########################################################################*/
+
 #include <bits/stdc++.h>
 
 using namespace std;
